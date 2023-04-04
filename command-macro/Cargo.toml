@@ -8,5 +8,5 @@ proc-macro = true
 
 [dependencies]
 command-parser = { path = "../command-parser" }
-syn = "1.0"
+syn = { version = "1.0", features = ["full"] }
 quote = "1.0"

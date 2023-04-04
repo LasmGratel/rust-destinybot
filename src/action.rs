@@ -5,7 +5,7 @@ pub struct Actor {
 }
 
 impl Actor {
-    pub fn send_message(&self) {w
+    pub fn send_message(&self) {
 
     }
 }

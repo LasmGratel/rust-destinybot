@@ -22,5 +22,6 @@ pub enum Message {
     },
     Location { lat: f64, lon: f64, title: Option<String>, content: Option<String> },
     Reply { id: String },
-    Forward { id: u64 }
+    Forward { id: u64 },
+    Json { }
 }

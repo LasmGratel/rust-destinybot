@@ -2,14 +2,16 @@
 
 use proc_macro::{TokenStream, TokenTree};
 use quote::quote;
-use syn::{Ident, LitStr, parse_macro_input, Token, Type};
+use syn::{ExprClosure, Ident, LitStr, parse_macro_input, Token, Type};
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
+use command_parser::ParseError;
 
 struct Command {
     ident: Ident,
     name: LitStr,
     fields: Punctuated<Type, Token![,]>,
+    on_call: ExprClosure,
 }
 
 impl Parse for Command {
@@ -17,12 +19,11 @@ impl Parse for Command {
         let ident = input.parse::<Ident>()?;
         let name = input.parse::<LitStr>()?;
 
-        eprintln!("{:?}", input);
         Ok(Command {
             ident,
             name,
+            on_call: input.parse::<ExprClosure>()?,
             fields: input.parse_terminated(Type::parse)?,
-
         })
     }
 }
@@ -44,24 +45,25 @@ fn impl_hello_macro(ast: &Command) -> TokenStream {
 
     let field_parsing = fields.iter().map(|f| {
         quote! {
-            println!("ggg");
-            (#f).from_str("ggg");
+            #f::from_str("blabla").map_err(|e| command_parser::ParseError::Argument(e.into()))?;
         }
     });
+
 
     let gen = quote! {
         struct #ident;
 
         impl FromStr for #ident {
-            type Err = ParseError;
+            type Err = command_parser::ParseError;
 
-            fn from_str(s: &str) -> Result<Self, Self::Err> {
-                println!("fff");
-                #(#field_parsing),*
+            fn from_str(s: &str) -> Result<Self, command_parser::ParseError> {
+                println!(#name);
+                #(#field_parsing)*
 
                 Ok(Self {})
             }
         }
     };
+
     gen.into()
 }

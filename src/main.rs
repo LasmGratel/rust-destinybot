@@ -2,12 +2,16 @@ mod event;
 mod message;
 mod action;
 mod commands;
+mod tests;
 
 #[macro_use]
 extern crate lazy_static;
 
 #[macro_use]
 extern crate serde;
+
+#[macro_use]
+extern crate thiserror;
 
 use futures::{SinkExt, StreamExt};
 use serde_json::json;
@@ -16,6 +20,7 @@ use tokio_tungstenite::connect_async;
 use tungstenite::http::Uri;
 use tungstenite::Message;
 use command_macro::command;
+use crate::commands::bilibili::streamer_command;
 use crate::event::Event;
 
 /// Send actions to remote server.
@@ -52,8 +57,18 @@ async fn process_messages(mut rx: tokio::sync::mpsc::Receiver<Event>, action: to
             Event::Message { raw_message, group_id, .. } => {
                 if let Some(group_id) = group_id {
 
-                    raw_message.split_once(' ');
-                    action.send(json!({"action": "send_msg", "params": {"group_id": group_id, "message": &raw_message}}).to_string()).await.expect("Cannot send action");
+                    if raw_message.starts_with("下饭主播") {
+                        match streamer_command().await {
+                            Ok(s) => {
+
+                                action.send(json!({"action": "send_msg", "params": {"group_id": group_id, "message": &s}}).to_string()).await.expect("Cannot send action");
+                            }
+                            Err(e) => {
+                                action.send(json!({"action": "send_msg", "params": {"group_id": group_id, "message": format!("执行命令时出现了错误：{:#?}", e)}}).to_string()).await.expect("Cannot send action");
+                            }
+                        }
+                    }
+
                 }
             }
             _ => {}
@@ -74,26 +89,4 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     join!(event_channel_handle, process_channel_handle, action_channel_handle);
     Ok(())
-}
-
-mod tests {
-    use std::str::FromStr;
-    use std::string::ParseError;
-    use command_macro::command;
-    use crate::message::Message;
-
-    impl FromStr for Message {
-        type Err = ParseError;
-
-        fn from_str(s: &str) -> Result<Self, Self::Err> {
-            todo!()
-        }
-    }
-
-    #[test]
-    pub fn test() {
-        command!(PingCommand "/ping");
-
-        PingCommand::from_str("ggg");
-    }
 }

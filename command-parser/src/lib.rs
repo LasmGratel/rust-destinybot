@@ -1,61 +1,42 @@
 use std::any::Any;
 use std::marker::PhantomData;
+use std::str::FromStr;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ParseError {
     #[error("Unknown error")]
-    Unknown
+    Unknown,
+
+    #[error("Argument parse")]
+    Argument(#[from] Box<dyn std::error::Error>)
 }
 
-struct CommandSpec {
-
+pub trait Command {
+    fn on_call(&self);
 }
 
-pub struct ArgumentSpec<T, R> {
-    _phantom: PhantomData<T>,
-    _remaining: PhantomData<R>,
+pub struct CommandManager {
+    parser: Vec<Box<dyn Fn(&str) -> Result<Box<dyn Command>, ParseError>>>
 }
 
-impl<T, R> Default for ArgumentSpec<T, R> {
-    fn default() -> Self {
-        ArgumentSpec {
-            _phantom: PhantomData::default(),
-            _remaining: PhantomData::default()
-        }
+impl CommandManager {
+    pub fn parse(&mut self, s: &str) {
+        self.parser.push(Box::new(PingCommand::from_str));
     }
 }
 
-pub struct Cons<T> {
-    _phantom: PhantomData<T>,
-}
+pub struct PingCommand;
 
-impl<T> Default for Cons<T> {
-    fn default() -> Self {
-        Cons {
-            _phantom: PhantomData::default()
-        }
+impl Command for PingCommand {
+    fn on_call(&self) {
+        todo!()
     }
 }
 
+impl PingCommand {
 
-pub struct Nil;
-
-macro_rules! command {
-    ($name:tt, $($arg:tt:$t:ty),+) => {
-        register_command($name.to_string());
-        dbg!("Command {} with args", $name, ($($t::type_id()),+));
-    };
-}
-
-fn register_command(name: String) {
-    let a: ArgumentSpec<Cons<String>, Nil> = ArgumentSpec::default();
-}
-
-fn on_call() {
-    //command!("bla", name: String);
-}
-
-fn case<'a, 'b, F>(literal: &'a str, f: F) where F: Fn(&'b str) {
-
+    fn from_str(s: &str) -> Result<Box<dyn Command>, ParseError> {
+        Ok(Box::new(PingCommand))
+    }
 }
