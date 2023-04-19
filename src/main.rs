@@ -2,6 +2,8 @@ mod event;
 mod message;
 mod action;
 mod commands;
+
+#[cfg(test)]
 mod tests;
 
 #[macro_use]

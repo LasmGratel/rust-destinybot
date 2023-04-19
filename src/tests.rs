@@ -1,13 +1,16 @@
 use std::str::FromStr;
 use std::string::ParseError;
 use command_macro::command;
+use crate::event::MemberRole;
 use crate::commands::bilibili::{get_live_room_info, get_user_info, streamer_command};
 
 #[test]
 pub fn test() {
-    command!(PingCommand "/ping" |x, y| { println!("{}, {}", x, y); } String, i32);
+}
 
-    PingCommand::from_str("ggg").expect("TODO: panic message");
+#[command("/ping", "ping")]
+struct PingCommand {
+    server: String
 }
 
 #[tokio::test]

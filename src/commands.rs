@@ -1,11 +1,18 @@
+use async_trait::async_trait;
 use reqwest::{Client, IntoUrl};
 use reqwest::header::{HeaderMap, HeaderValue};
 use serde::Deserialize;
 use serde_json::Value;
 use itertools::Itertools;
+use crate::action::Actor;
 
 lazy_static! {
     static ref CLIENT: Client = build_client();
+}
+
+#[async_trait]
+pub trait Command {
+    async fn invoke(&self, mut actor: Actor) -> anyhow::Result<()>;
 }
 
 fn build_client() -> Client {
@@ -30,9 +37,11 @@ async fn get_json<T: IntoUrl, D: for<'de> serde::Deserialize<'de>>(url: T) -> re
 }
 
 pub mod bilibili {
+    use async_trait::async_trait;
     use futures::future::join_all;
     use itertools::Itertools;
-    use crate::commands::get_json;
+    use crate::action::Actor;
+    use crate::commands::{Command, get_json};
 
     #[derive(Debug, Deserialize)]
     pub struct BilibiliResult<T> {
@@ -90,6 +99,15 @@ pub mod bilibili {
         )
     }
 
+    pub struct StreamerCommand;
+
+    #[async_trait]
+    impl super::Command for StreamerCommand {
+        async fn invoke(&self, actor: Actor) -> anyhow::Result<()> {
+            Ok(())
+        }
+    }
+
     pub async fn streamer_command() -> anyhow::Result<String> {
         let mut any_online = false;
         let mut s = String::new();
@@ -125,4 +143,3 @@ pub mod bilibili {
         }
     }
 }
-

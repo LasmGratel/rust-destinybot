@@ -1,69 +1,54 @@
-#![feature(proc_macro_diagnostic)]
-
-use proc_macro::{TokenStream, TokenTree};
+use proc_macro2::{TokenStream, TokenTree};
 use quote::quote;
-use syn::{ExprClosure, Ident, LitStr, parse_macro_input, Token, Type};
+use syn::{Attribute, ExprClosure, Field, Ident, Item, ItemStruct, LitStr, parse_macro_input, Token, Type};
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
+use syn::token::Comma;
 use command_parser::ParseError;
 
-struct Command {
-    ident: Ident,
-    name: LitStr,
-    fields: Punctuated<Type, Token![,]>,
-    on_call: ExprClosure,
-}
-
-impl Parse for Command {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let ident = input.parse::<Ident>()?;
-        let name = input.parse::<LitStr>()?;
-
-        Ok(Command {
-            ident,
-            name,
-            on_call: input.parse::<ExprClosure>()?,
-            fields: input.parse_terminated(Type::parse)?,
-        })
+fn get_fields(d: &syn::ItemStruct) -> syn::Result<&Punctuated<Field, Token![,]>> {
+    if let syn::ItemStruct {
+                                 fields: syn::Fields::Named(syn::FieldsNamed { ref named, .. }),
+                                 ..
+                             } = d {
+        return Ok(named)
     }
+    Err(syn::Error::new_spanned(d, "Must define on a Struct, not Enum".to_string()))
 }
 
-#[proc_macro]
-pub fn command(input: TokenStream) -> TokenStream {
-    // Construct a representation of Rust code as a syntax tree
-    // that we can manipulate
-    let ast = parse_macro_input!(input as Command);
+fn generate_builder_struct_fields_def(fields: &Punctuated<Field, Token![,]>) -> syn::Result<TokenStream>{
+    let idents:Vec<_> = fields.iter().map(|f| {&f.ident}).collect();
+    let types:Vec<_> = fields.iter().map(|f| {&f.ty}).collect();
 
-    // Build the trait implementation
-    impl_hello_macro(&ast)
+    Ok(quote!(
+        #(#idents: #types::from_str("")),*
+    ).into())
 }
 
-fn impl_hello_macro(ast: &Command) -> TokenStream {
-    let ident = &ast.ident;
-    let name = &ast.name;
-    let fields = &ast.fields;
-
-    let field_parsing = fields.iter().map(|f| {
-        quote! {
-            #f::from_str("blabla").map_err(|e| command_parser::ParseError::Argument(e.into()))?;
-        }
-    });
+#[proc_macro_attribute]
+pub fn command(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let args = parse_macro_input!(attr as Attribute);
+    eprintln!("{:#?}", args);
 
 
-    let gen = quote! {
-        struct #ident;
+    let st = parse_macro_input!(item as ItemStruct);
+    eprintln!("{:#?}", st);
 
-        impl FromStr for #ident {
+    let st_ident = &st.ident;
+
+    let fields = get_fields(&st).unwrap();
+    let builder_struct_fields_def = generate_builder_struct_fields_def(fields).unwrap();
+
+
+    quote!(
+        #st
+
+        impl FromStr for #st_ident {
             type Err = command_parser::ParseError;
 
-            fn from_str(s: &str) -> Result<Self, command_parser::ParseError> {
-                println!(#name);
-                #(#field_parsing)*
-
-                Ok(Self {})
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                #builder_struct_fields_def
             }
         }
-    };
-
-    gen.into()
+    ).into()
 }
