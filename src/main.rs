@@ -21,8 +21,8 @@ use tokio::join;
 use tokio_tungstenite::connect_async;
 use tungstenite::http::Uri;
 use tungstenite::Message;
-use command_macro::command;
-use crate::commands::bilibili::streamer_command;
+use command_parser::CommandManager;
+use crate::commands::bilibili::{streamer_command, StreamerCommand};
 use crate::event::Event;
 
 /// Send actions to remote server.
@@ -78,8 +78,18 @@ async fn process_messages(mut rx: tokio::sync::mpsc::Receiver<Event>, action: to
     }
 }
 
+fn build_command_manager() -> CommandManager {
+    let mut command_manager = CommandManager::default();
+    command_manager.register::<StreamerCommand>(&["下饭主播"]);
+    command_manager
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+
+
+
+
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(4);
 
     let (action_tx, mut action_rx) = tokio::sync::mpsc::channel(4);

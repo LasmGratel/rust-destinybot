@@ -1,6 +1,6 @@
 use std::str::FromStr;
 use std::string::ParseError;
-use command_macro::command;
+use command_parser::Command;
 use crate::event::MemberRole;
 use crate::commands::bilibili::{get_live_room_info, get_user_info, streamer_command};
 
@@ -8,6 +8,7 @@ use crate::commands::bilibili::{get_live_room_info, get_user_info, streamer_comm
 pub fn test() {
 }
 
+#[derive(Command)]
 #[command("/ping", "ping")]
 struct PingCommand {
     server: String

@@ -1,10 +1,11 @@
 use proc_macro2::{TokenStream, TokenTree};
 use quote::quote;
-use syn::{Attribute, ExprClosure, Field, Ident, Item, ItemStruct, LitStr, parse_macro_input, Token, Type};
+use syn::{Attribute, ExprClosure, Field, Ident, Item, ItemStruct, LitStr, Meta, parse_macro_input, parse_quote, Token, Type};
+use syn::meta::ParseNestedMeta;
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::token::Comma;
-use command_parser::ParseError;
+use command_parser::{ParseError, Command};
 
 fn get_fields(d: &syn::ItemStruct) -> syn::Result<&Punctuated<Field, Token![,]>> {
     if let syn::ItemStruct {
@@ -25,12 +26,8 @@ fn generate_builder_struct_fields_def(fields: &Punctuated<Field, Token![,]>) -> 
     ).into())
 }
 
-#[proc_macro_attribute]
-pub fn command(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let args = parse_macro_input!(attr as Attribute);
-    eprintln!("{:#?}", args);
-
-
+#[proc_macro_derive(Command)]
+pub fn command(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let st = parse_macro_input!(item as ItemStruct);
     eprintln!("{:#?}", st);
 
